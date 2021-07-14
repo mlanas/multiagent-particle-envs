@@ -220,6 +220,9 @@ class MultiAgentEnv(gym.Env):
                 from multiagent import rendering
                 self.viewers[i] = rendering.Viewer(700,700)
 
+        # reset renderer (entities will be redrawn in case their are dead)
+        self._reset_render()
+
         # create rendering geometry
         if self.render_geoms is None:
             # import rendering only if we need it (and don't import for headless machines)

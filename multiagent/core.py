@@ -113,6 +113,16 @@ class World(object):
     def alive_entities(self):
         return [entity for entity in self.entities if entity.state.alive]
 
+    # return alive landmarks in the world
+    @property
+    def alive_landmarks(self):
+        return [landmark for landmark in self.landmarks if landmark.state.alive]
+
+    # return alive agents in the world
+    @property
+    def alive_agents(self):
+        return [agent for agent in self.agents if agent.state.alive]
+
     # return all agents controllable by external policies
     @property
     def policy_agents(self):
@@ -141,7 +151,7 @@ class World(object):
             self.update_agent_state(agent)
         # check if landmarks where captured
         if self.landmark_capture:
-            for landmark in self.landmarks:
+            for landmark in self.alive_landmarks:
                 self.update_landmark_state(landmark)
 
     # gather agent action forces
@@ -191,10 +201,11 @@ class World(object):
             agent.state.c = agent.action.c + noise   
 
     def update_landmark_state(self, landmark):
-        if not landmark.state.alive: return
-        for agent in self.agents:
+        for agent in self.alive_agents:
             if self.is_collision(landmark, agent):
+                # print("dead landmark")
                 landmark.state.alive = False
+                return
 
     # check if collision for landmark capture
     def is_collision(self, entity1, entity2):

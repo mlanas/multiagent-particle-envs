@@ -7,6 +7,8 @@ class EntityState(object):
         self.p_pos = None
         # physical velocity
         self.p_vel = None
+        # alive flag
+        self.alive = True
 
 # state of agents (including communication and internal/mental state)
 class AgentState(EntityState):
@@ -52,7 +54,7 @@ class Entity(object):
 
 # properties of landmark entities
 class Landmark(Entity):
-     def __init__(self):
+    def __init__(self):
         super(Landmark, self).__init__()
 
 # properties of agent entities
@@ -98,10 +100,18 @@ class World(object):
         self.contact_force = 1e+2
         self.contact_margin = 1e-3
 
+        # landmark capture flag if set, landmarks will be set as captured after colliding with an agent
+        self.landmark_capture = False
+
     # return all entities in the world
     @property
     def entities(self):
         return self.agents + self.landmarks
+
+    # return alive entities in the world
+    @property
+    def alive_entities(self):
+        return [entity for entity in self.entities if entity.state.alive]
 
     # return all agents controllable by external policies
     @property
@@ -129,6 +139,10 @@ class World(object):
         # update agent state
         for agent in self.agents:
             self.update_agent_state(agent)
+        # check if landmarks where captured
+        if self.landmark_capture:
+            for landmark in self.landmarks:
+                self.update_landmark_state(landmark)
 
     # gather agent action forces
     def apply_action_force(self, p_force):
@@ -174,7 +188,20 @@ class World(object):
             agent.state.c = np.zeros(self.dim_c)
         else:
             noise = np.random.randn(*agent.action.c.shape) * agent.c_noise if agent.c_noise else 0.0
-            agent.state.c = agent.action.c + noise      
+            agent.state.c = agent.action.c + noise   
+
+    def update_landmark_state(self, landmark):
+        if not landmark.state.alive: return
+        for agent in self.agents:
+            if self.is_collision(landmark, agent):
+                landmark.state.alive = False
+
+    # check if collision for landmark capture
+    def is_collision(self, entity1, entity2):
+        delta_pos = entity1.state.p_pos - entity2.state.p_pos
+        dist = np.sqrt(np.sum(np.square(delta_pos)))
+        dist_min = entity1.size + entity2.size
+        return True if dist < dist_min else False
 
     # get collision forces for any contact between two entities
     def get_collision_force(self, entity_a, entity_b):
